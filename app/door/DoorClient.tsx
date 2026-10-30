@@ -21,6 +21,41 @@ type Ask = { title: string; detail?: string; confirmLabel: string; run: () => Pr
 const COLORS = { admitted: "#1a7f37", already: "#d97706", unpaid: "#c00", unknown: "#555" };
 const MANUAL: (PaidVia | undefined)[] = ["cash", "personal-upi"];
 const VIA_LABEL: Record<"cash" | "personal-upi", string> = { cash: "cash", "personal-upi": "personal UPI" };
+const PAY_CHIP: Record<PaidVia, { label: string; color: string }> = {
+  online: { label: "Online", color: "#1a7f37" },
+  "door-upi": { label: "Door UPI", color: "#1a7f37" },
+  "door-link": { label: "Door link", color: "#1a7f37" },
+  cash: { label: "Cash", color: "#9a5b00" },
+  "personal-upi": { label: "Personal UPI", color: "#1d4ed8" },
+};
+const FULL = { width: "100%", display: "block" } as const;
+
+type Filter = "all" | "notIn" | "in" | "unpaid";
+const FILTERS: { key: Filter; label: string; match: (g: GuestRow) => boolean }[] = [
+  { key: "all", label: "All", match: () => true },
+  { key: "notIn", label: "Not in", match: (g) => !g.checkedInAt },
+  { key: "in", label: "In", match: (g) => !!g.checkedInAt },
+  { key: "unpaid", label: "Unpaid", match: (g) => !g.paid },
+];
+
+function Chip({ label, color, outline }: { label: string; color: string; outline?: boolean }) {
+  return (
+    <span
+      style={{
+        display: "inline-block",
+        padding: "2px 8px",
+        borderRadius: 999,
+        fontSize: 13,
+        whiteSpace: "nowrap",
+        border: `1px solid ${color}`,
+        background: outline ? "transparent" : color,
+        color: outline ? color : "white",
+      }}
+    >
+      {label}
+    </span>
+  );
+}
 
 async function postJson(url: string, body: unknown) {
   const res = await fetch(url, {
@@ -47,6 +82,8 @@ export default function DoorClient({ fee }: { fee: number }) {
   const [list, setList] = useState<GuestRow[]>([]);
   const [stats, setStats] = useState<Stats[]>([]);
   const [refresh, setRefresh] = useState(0);
+  const [open, setOpen] = useState<string | null>(null);
+  const [filter, setFilter] = useState<Filter>("all");
   const busyRef = useRef(false);
 
   const scan = useCallback(async (raw: string) => {
@@ -127,6 +164,7 @@ export default function DoorClient({ fee }: { fee: number }) {
       run: async () => {
         await postJson("/api/door/undo", { token: g.token, what: "checkin" });
         setResult(null);
+        setRefresh((n) => n + 1);
       },
     });
   }
@@ -142,14 +180,29 @@ export default function DoorClient({ fee }: { fee: number }) {
     }
   }
 
+  // Opens the result card for a guest picked from the list.
+  function openFromList(token: string) {
+    setOpen(null);
+    window.scrollTo({ top: 0 });
+    scan(token);
+  }
+
+  const totalIn = stats.reduce((n, s) => n + s.checkedIn, 0);
+  const total = stats.reduce((n, s) => n + s.total, 0);
+  const shown = list.filter(FILTERS.find((f) => f.key === filter)!.match);
+
   return (
     <div>
-      <h1>Door</h1>
-      {stats.map((s) => (
-        <p key={s.program} style={{ margin: "2px 0" }}>
-          <b>{shortProgram(s.program)}</b>: in {s.checkedIn} · paid {s.paid} / {s.total}
-        </p>
-      ))}
+      <h1 style={{ margin: "0 0 4px" }}>Door</h1>
+      <p style={{ margin: "0 0 8px", fontSize: 13, color: "#555" }}>
+        <b>All {totalIn}/{total} in</b>
+        {stats.map((s) => (
+          <span key={s.program}>
+            {" | "}
+            {shortProgram(s.program)} {s.checkedIn}/{s.total} in · {s.paid} paid
+          </span>
+        ))}
+      </p>
 
       {ask && (
         <div
@@ -179,7 +232,7 @@ export default function DoorClient({ fee }: { fee: number }) {
       )}
 
       {!result && (
-        <div style={{ maxWidth: 360 }}>
+        <div style={{ width: "100%" }}>
           <Scanner
             onScan={(codes) => codes[0] && scan(codes[0].rawValue)}
             onError={(e) => console.error(e)}
@@ -212,8 +265,14 @@ export default function DoorClient({ fee }: { fee: number }) {
           {result.result === "already" && <p>Checked in at {new Date(result.checkedInAt).toLocaleTimeString()}</p>}
           {(result.result === "admitted" || result.result === "already") && (
             <>
-              <button onClick={() => askUndoCheckIn(result)}>Wrong person? Undo check-in</button>{" "}
-              {MANUAL.includes(result.paidVia) && <button onClick={() => askUndoPaid(result)}>Undo payment</button>}
+              <button onClick={() => askUndoCheckIn(result)} style={FULL}>
+                Wrong person? Undo check-in
+              </button>
+              {MANUAL.includes(result.paidVia) && (
+                <button onClick={() => askUndoPaid(result)} style={FULL}>
+                  Undo payment
+                </button>
+              )}
             </>
           )}
           {result.result === "unpaid" && (
@@ -227,45 +286,136 @@ export default function DoorClient({ fee }: { fee: number }) {
                 <p>Couldn&apos;t create a payment QR. Tap Next guest and rescan, or take UPI/cash below.</p>
               )}
               <p>Paid some other way?</p>
-              <button onClick={() => askMarkPaid(result, "personal-upi", true)}>Paid via personal UPI</button>{" "}
-              <button onClick={() => askMarkPaid(result, "cash", true)}>Paid cash</button>
+              <button onClick={() => askMarkPaid(result, "personal-upi", true)} style={FULL}>
+                Paid via personal UPI
+              </button>
+              <button onClick={() => askMarkPaid(result, "cash", true)} style={FULL}>
+                Paid cash
+              </button>
             </div>
           )}
         </div>
       )}
-      {result && <button onClick={() => setResult(null)}>Next guest</button>}
+      {result && (
+        <button onClick={() => setResult(null)} style={{ ...FULL, fontWeight: "bold" }}>
+          Next guest
+        </button>
+      )}
 
-      <h2>Find guest</h2>
-      <input
-        placeholder="Name or roll number"
-        value={query}
-        onChange={(e) => {
-          setQuery(e.target.value);
-          search(e.target.value);
-        }}
-      />
-      <ul style={{ paddingLeft: 0, listStyle: "none" }}>
-        {list.map((g) => (
-          <li key={g.token} style={{ borderBottom: "1px solid #ddd", padding: "4px 0" }}>
-            <button onClick={() => scan(g.token)} style={{ textAlign: "left" }}>
-              {g.name} · {g.rollNo} · {shortProgram(g.program)} ·{" "}
-              {g.checkedInAt ? "in" : g.paid ? `paid (${g.paidVia})` : "unpaid"}
-            </button>
-            {!g.paid && (
-              <>
-                {" "}
-                <button onClick={() => askMarkPaid(g, "personal-upi", false)}>UPI paid</button>{" "}
-                <button onClick={() => askMarkPaid(g, "cash", false)}>Cash paid</button>
-              </>
-            )}
-            {g.paid && MANUAL.includes(g.paidVia) && (
-              <>
-                {" "}
-                <button onClick={() => askUndoPaid(g)}>Undo paid</button>
-              </>
-            )}
-          </li>
-        ))}
+      <div style={{ position: "sticky", top: 0, background: "white", zIndex: 5, padding: "8px 0 4px" }}>
+        <input
+          placeholder="Find guest: name or roll number"
+          value={query}
+          onChange={(e) => {
+            setQuery(e.target.value);
+            search(e.target.value);
+          }}
+        />
+        <div style={{ display: "flex", gap: 6, overflowX: "auto" }}>
+          {FILTERS.map((f) => {
+            const on = f.key === filter;
+            return (
+              <button
+                key={f.key}
+                onClick={() => setFilter(f.key)}
+                style={{
+                  flex: "1 0 auto",
+                  borderRadius: 999,
+                  border: "1px solid #333",
+                  padding: "4px 10px",
+                  fontSize: 14,
+                  background: on ? "#333" : "white",
+                  color: on ? "white" : "#333",
+                }}
+              >
+                {f.label} {list.filter(f.match).length}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <ul style={{ paddingLeft: 0, margin: 0, listStyle: "none" }}>
+        {shown.map((g) => {
+          const isOpen = open === g.token;
+          const pay = g.paid && g.paidVia ? PAY_CHIP[g.paidVia] : null;
+          return (
+            <li key={g.token} style={{ borderBottom: "1px solid #ddd" }}>
+              <button
+                onClick={() => setOpen(isOpen ? null : g.token)}
+                aria-expanded={isOpen}
+                style={{
+                  ...FULL,
+                  margin: 0,
+                  padding: "10px 0",
+                  minHeight: 48,
+                  border: "none",
+                  background: "none",
+                  color: "inherit",
+                  textAlign: "left",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: 8,
+                }}
+              >
+                <b style={{ overflowWrap: "anywhere" }}>{g.name}</b>
+                <span style={{ display: "flex", gap: 4, flexShrink: 0 }}>
+                  {pay ? (
+                    <Chip label={pay.label} color={pay.color} />
+                  ) : g.paid ? (
+                    <Chip label="Paid" color="#1a7f37" />
+                  ) : (
+                    <Chip label="Unpaid" color={COLORS.unpaid} />
+                  )}
+                  {g.checkedInAt ? (
+                    <Chip label="✓ In" color={COLORS.admitted} />
+                  ) : (
+                    <Chip label="Not in" color="#777" outline />
+                  )}
+                </span>
+              </button>
+              {isOpen && (
+                <div style={{ paddingBottom: 8 }}>
+                  {g.checkedInAt && (
+                    <p style={{ margin: "0 0 4px", fontSize: 14 }}>
+                      Checked in at {new Date(g.checkedInAt).toLocaleTimeString()}
+                    </p>
+                  )}
+                  {g.paid && !g.checkedInAt && (
+                    <button onClick={() => openFromList(g.token)} style={{ ...FULL, fontWeight: "bold" }}>
+                      Check in
+                    </button>
+                  )}
+                  {g.checkedInAt && (
+                    <button onClick={() => askUndoCheckIn(g)} style={FULL}>
+                      Undo check-in
+                    </button>
+                  )}
+                  {g.paid && MANUAL.includes(g.paidVia) && (
+                    <button onClick={() => askUndoPaid(g)} style={FULL}>
+                      Undo payment
+                    </button>
+                  )}
+                  {!g.paid && (
+                    <>
+                      <button onClick={() => openFromList(g.token)} style={{ ...FULL, fontWeight: "bold" }}>
+                        Take payment (show QR)
+                      </button>
+                      <button onClick={() => askMarkPaid(g, "personal-upi", false)} style={FULL}>
+                        Mark paid: personal UPI
+                      </button>
+                      <button onClick={() => askMarkPaid(g, "cash", false)} style={FULL}>
+                        Mark paid: cash
+                      </button>
+                    </>
+                  )}
+                </div>
+              )}
+            </li>
+          );
+        })}
+        {shown.length === 0 && <li style={{ padding: "12px 0", color: "#555" }}>No guests match.</li>}
       </ul>
 
       <p>
