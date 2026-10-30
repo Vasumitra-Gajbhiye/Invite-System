@@ -100,7 +100,8 @@ try {
     }
 
     // The old schema had a unique phone index; roster guests have no phone, so it must go.
-    const indexes = await col.indexes();
+    // Throws if the collection doesn't exist yet (fresh database).
+    const indexes = await col.indexes().catch(() => []);
     if (indexes.some((i) => i.name === "phone_1")) {
       await col.dropIndex("phone_1");
       console.log("Dropped phone_1 index");

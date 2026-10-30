@@ -51,6 +51,17 @@ node --env-file=.env scripts/import-roster.mjs --apply    # writes; backs up all
 - It never marks anyone unpaid, so rerunning after door or Razorpay payments is safe. Students removed from the sheet are reported, not deleted.
 - If there are old phone/email signups, it stops and lists them (flagging any Razorpay payments). Add `--wipe` to delete them.
 
+### Resetting to the sheet
+
+To wipe test marks, check-ins and pending payments and make the database match `data/roster.csv` exactly:
+
+```
+node --env-file=.env scripts/reset-to-roster.mjs            # dry run: lists every change
+node --env-file=.env scripts/reset-to-roster.mjs --apply    # backs up to backups/, then resets
+```
+
+Invite links (tokens) are kept. The dry run warns about any Razorpay payment that the reset would wipe.
+
 ## Local dev
 
 ```
