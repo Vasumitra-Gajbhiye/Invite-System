@@ -8,5 +8,6 @@ export const EVENT = {
   dressCode: "Costumes mandatory. Spooky, scary or silly.",
 };
 
-export const FEE_RUPEES = 95;
+// Server-only: client components receive the fee as a prop, since PRICE isn't exposed to the browser.
+export const FEE_RUPEES = Number(process.env.PRICE) || 95;
 export const FEE_PAISE = FEE_RUPEES * 100;

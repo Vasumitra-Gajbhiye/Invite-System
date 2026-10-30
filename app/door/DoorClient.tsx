@@ -2,7 +2,6 @@
 
 import { Scanner } from "@yudiel/react-qr-scanner";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { FEE_RUPEES } from "@/lib/config";
 import type { DoorResult } from "@/lib/door";
 
 type GuestRow = { token: string; name: string; phone: string; paid: boolean; checkedInAt?: string };
@@ -20,7 +19,7 @@ async function postJson(url: string, body: unknown) {
   return res.json();
 }
 
-export default function DoorClient() {
+export default function DoorClient({ fee }: { fee: number }) {
   const [result, setResult] = useState<DoorResult | null>(null);
   const [busy, setBusy] = useState(false);
   const [query, setQuery] = useState("");
@@ -72,7 +71,7 @@ export default function DoorClient() {
   }, [pendingToken]);
 
   async function markCash(token: string) {
-    if (!confirm(`Collected ₹${FEE_RUPEES} cash?`)) return;
+    if (!confirm(`Collected ₹${fee} cash?`)) return;
     setResult(await postJson("/api/door/cash", { token }));
   }
 
@@ -117,7 +116,7 @@ export default function DoorClient() {
               <h2>
                 🔴 NOT PAID: {result.name}
               </h2>
-              <p>Ask them to scan and pay ₹{FEE_RUPEES}. This screen turns green when payment lands.</p>
+              <p>Ask them to scan and pay ₹{fee}. This screen turns green when payment lands.</p>
               {result.payment && (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={result.payment.image} alt="Payment QR" style={{ width: "100%", background: "white" }} />

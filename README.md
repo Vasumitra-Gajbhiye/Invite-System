@@ -25,7 +25,7 @@ Payments are confirmed three ways, so a single failure doesn't block entry:
    ```
    In Atlas → Network Access, allow `0.0.0.0/0`, because Vercel has no fixed IPs.
 2. **Env vars** (in Vercel and in `.env.local` for local dev). See `.env.example`:
-   `MONGODB_URI`, `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, `RAZORPAY_WEBHOOK_SECRET`, `DOOR_PIN` (use 6+ digits).
+   `MONGODB_URI`, `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, `RAZORPAY_WEBHOOK_SECRET`, `DOOR_PIN` (use 6+ digits), `PRICE` (entry fee in rupees, defaults to 95; redeploy after changing it).
 3. **Razorpay webhook**: Dashboard → Webhooks → Add:
    - URL: `https://<your-site>/api/razorpay/webhook`
    - Secret: the same value as `RAZORPAY_WEBHOOK_SECRET`

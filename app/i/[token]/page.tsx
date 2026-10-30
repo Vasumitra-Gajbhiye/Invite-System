@@ -34,7 +34,7 @@ export default async function InvitePage(props: PageProps<"/i/[token]">) {
       </p>
 
       {!guest.paid && (
-        <PayButton token={guest.token} name={guest.name} email={guest.email} phone={guest.phone} />
+        <PayButton token={guest.token} name={guest.name} email={guest.email} phone={guest.phone} fee={FEE_RUPEES} />
       )}
 
       <h2>Your entry pass</h2>

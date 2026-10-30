@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { EVENT, FEE_RUPEES } from "@/lib/config";
+import { EVENT } from "@/lib/config";
 
 type RazorpayHandlerResponse = {
   razorpay_order_id: string;
@@ -27,7 +27,7 @@ function loadCheckout() {
   });
 }
 
-export default function PayButton(props: { token: string; name: string; email: string; phone: string }) {
+export default function PayButton(props: { token: string; name: string; email: string; phone: string; fee: number }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -75,7 +75,7 @@ export default function PayButton(props: { token: string; name: string; email: s
   return (
     <div>
       <button onClick={pay} disabled={busy}>
-        {busy ? "Opening payment…" : `Pay ₹${FEE_RUPEES}`}
+        {busy ? "Opening payment…" : `Pay ₹${props.fee}`}
       </button>
       {error && <p className="error">{error}</p>}
     </div>
