@@ -11,8 +11,9 @@ Halloween invite + door check-in. Next.js on Vercel, MongoDB, Razorpay.
   - 🟢 **LET IN**: the guest has paid, and the scan checks them in. **Wrong person? Undo check-in** reverses it if someone used another student's QR.
   - 🟠 **ALREADY CHECKED IN**: this QR has already been used.
   - 🔴 **NOT PAID**: shows a Razorpay UPI QR for ₹95. The screen turns green on its own once the payment lands. If the QR Codes API isn't enabled on the account, it falls back to a Razorpay Payment Link shown as a QR. **Paid via personal UPI** and **Paid cash** mark the guest paid and check them in, after a confirmation.
-  - **Find guest**: search by name or roll number. Each row can be marked **UPI paid** or **Cash paid** (records the payment without checking in), or **Undo paid** for manual marks. Razorpay-confirmed payments can't be undone from the door.
-  - **Download status CSV**: everyone's payment and check-in status, with a log of every manual mark and undo.
+  - **Find guest**: search by name or roll number. Each row can be marked **UPI paid** or **Cash paid** (records the payment without checking in), or **Mark unpaid** for any payment, including Razorpay ones (this doesn't refund the money; refund from the Razorpay dashboard). Mark unpaid also clears the check-in and detaches the old Razorpay payment, so the guest is asked to pay again.
+  - **History**: newest-first feed of every payment, check-in, payment QR and undo, with who did it. Each guest row has its own History too. The first time on each phone, volunteers are asked for their name.
+  - **Download status CSV**: everyone's payment and check-in status, with the same log.
 
 Payments are confirmed three ways, so a single failure doesn't block entry:
 1. The Checkout signature is verified right after an online payment.

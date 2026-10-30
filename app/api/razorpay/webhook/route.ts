@@ -24,7 +24,7 @@ export async function POST(req: Request) {
     case "payment.captured": {
       if (!payment || (payment.amount ?? 0) < FEE_PAISE) break;
       if (payment.order_id) {
-        await markPaid({ razorpayOrderIds: payment.order_id }, "online", payment.id);
+        await markPaid({ razorpayOrderIds: payment.order_id }, "online", payment.id, "webhook");
       }
       break;
     }
@@ -32,14 +32,14 @@ export async function POST(req: Request) {
       const qr: Entity | undefined = event.payload?.qr_code?.entity;
       if (!qr || !payment) break;
       const token = noteToken(qr);
-      await markPaid(token ? { token } : { doorQrId: qr.id }, "door-upi", payment.id);
+      await markPaid(token ? { token } : { doorQrId: qr.id }, "door-upi", payment.id, "webhook");
       break;
     }
     case "payment_link.paid": {
       const link: Entity | undefined = event.payload?.payment_link?.entity;
       if (!link) break;
       const token = noteToken(link);
-      await markPaid(token ? { token } : { doorLinkId: link.id }, "door-link", payment?.id);
+      await markPaid(token ? { token } : { doorLinkId: link.id }, "door-link", payment?.id, "webhook");
       break;
     }
   }

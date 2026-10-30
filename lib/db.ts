@@ -2,10 +2,25 @@ import { MongoClient, type Collection } from "mongodb";
 
 export type PaidVia = "online" | "door-upi" | "door-link" | "cash" | "personal-upi";
 
-// Payments recorded by hand rather than confirmed by Razorpay; only these can be undone at the door.
+// Payments recorded by hand rather than confirmed by Razorpay.
 export const MANUAL_PAID_VIA: PaidVia[] = ["cash", "personal-upi"];
 
-export type LogEntry = { at: Date; action: "paid" | "undo-paid" | "undo-checkin"; via?: PaidVia; source: string };
+export type LogAction = "paid" | "unpaid" | "undo-paid" | "check-in" | "undo-checkin" | "payment-qr";
+export type LogSource = "door" | "checkout" | "webhook" | "sync";
+
+// "undo-paid" is only on entries written before mark-unpaid replaced it.
+export type LogEntry = {
+  at: Date;
+  action: LogAction;
+  source: LogSource;
+  via?: PaidVia;
+  paymentId?: string;
+  // Volunteer name, for door actions.
+  by?: string;
+};
+
+// One row of the door History feed.
+export type HistoryEntry = LogEntry & { token: string; name: string; rollNo: string };
 
 export type Guest = {
   token: string;
@@ -26,7 +41,9 @@ export type Guest = {
   doorLinkUrl?: string;
   doorPaymentExpiresAt?: Date;
   checkedInAt?: Date;
-  // Audit trail of manual marks and undos.
+  // Razorpay order/QR/link IDs detached by mark-unpaid, so syncPayment no longer finds them.
+  archivedRazorpayIds?: string[];
+  // Audit trail of every payment, check-in and undo.
   log?: LogEntry[];
 };
 

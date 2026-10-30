@@ -22,7 +22,12 @@ export async function GET() {
     g.paidAt,
     g.razorpayPaymentId,
     g.checkedInAt,
-    (g.log ?? []).map((l) => `${l.at.toISOString()} ${l.action}${l.via ? ` ${l.via}` : ""} (${l.source})`).join("; "),
+    (g.log ?? [])
+      .map(
+        (l) =>
+          `${l.at.toISOString()} ${l.action}${l.via ? ` ${l.via}` : ""}${l.paymentId ? ` ${l.paymentId}` : ""} (${l.source}${l.by ? ` by ${l.by}` : ""})`,
+      )
+      .join("; "),
   ]);
   const csv = [header, ...rows].map((r) => r.map(cell).join(",")).join("\n");
 

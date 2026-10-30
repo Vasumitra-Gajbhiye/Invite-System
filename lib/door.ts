@@ -15,7 +15,8 @@ function who(g: Guest): Who {
 }
 
 // Checks a guest in if paid. If unpaid and `withPayment` is set, returns a ₹95 payment QR.
-export async function admit(token: string, withPayment: boolean): Promise<DoorResult> {
+// `by` is the volunteer, recorded in the guest's log.
+export async function admit(token: string, withPayment: boolean, by?: string): Promise<DoorResult> {
   const col = await guests();
   let guest = await col.findOne({ token });
   if (!guest) return { result: "unknown" };
@@ -26,7 +27,7 @@ export async function admit(token: string, withPayment: boolean): Promise<DoorRe
     let payment: DoorPayment | undefined;
     if (withPayment) {
       // Never block the door on Razorpay: on failure the volunteer can still mark it paid or rescan.
-      payment = await getDoorPayment(guest).catch((err) => {
+      payment = await getDoorPayment(guest, by).catch((err) => {
         console.error("Door payment create failed", err);
         return undefined;
       });
@@ -37,7 +38,7 @@ export async function admit(token: string, withPayment: boolean): Promise<DoorRe
   // Atomic, so two scans of the same QR can't both get in.
   const checkedIn = await col.findOneAndUpdate(
     { token, checkedInAt: { $exists: false } },
-    { $set: { checkedInAt: new Date() } },
+    { $set: { checkedInAt: new Date() }, $push: { log: { at: new Date(), action: "check-in", source: "door", by } } },
     { returnDocument: "after" },
   );
   if (checkedIn) return { result: "admitted", ...who(guest), paidVia: guest.paidVia };

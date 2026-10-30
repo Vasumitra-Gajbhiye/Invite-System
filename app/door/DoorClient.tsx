@@ -3,7 +3,7 @@
 import { Scanner } from "@yudiel/react-qr-scanner";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { DoorResult } from "@/lib/door";
-import type { PaidVia } from "@/lib/db";
+import type { HistoryEntry, LogAction, PaidVia } from "@/lib/db";
 
 type GuestRow = {
   token: string;
@@ -17,8 +17,11 @@ type GuestRow = {
 type Stats = { program: string; total: number; paid: number; checkedIn: number };
 type Who = { token: string; name: string; rollNo: string };
 type Ask = { title: string; detail?: string; confirmLabel: string; run: () => Promise<void> };
+// `who` is set for one guest's history, unset for the whole door.
+type History = { who?: Who; entries: HistoryEntry[] | null };
 
 const COLORS = { admitted: "#1a7f37", already: "#d97706", unpaid: "#c00", unknown: "#555" };
+// Mirrors MANUAL_PAID_VIA; lib/db can't be imported as a value here since it pulls in the Mongo client.
 const MANUAL: (PaidVia | undefined)[] = ["cash", "personal-upi"];
 const VIA_LABEL: Record<"cash" | "personal-upi", string> = { cash: "cash", "personal-upi": "personal UPI" };
 const PAY_CHIP: Record<PaidVia, { label: string; color: string }> = {
@@ -28,7 +31,36 @@ const PAY_CHIP: Record<PaidVia, { label: string; color: string }> = {
   cash: { label: "Cash", color: "#9a5b00" },
   "personal-upi": { label: "Personal UPI", color: "#1d4ed8" },
 };
+const ACTION_LABEL: Record<LogAction, string> = {
+  paid: "Paid",
+  unpaid: "Marked unpaid",
+  "undo-paid": "Undo payment",
+  "check-in": "Checked in",
+  "undo-checkin": "Undo check-in",
+  "payment-qr": "Payment QR shown",
+};
 const FULL = { width: "100%", display: "block" } as const;
+const OVERLAY = {
+  position: "fixed",
+  inset: 0,
+  background: "rgba(0,0,0,0.6)",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  padding: 16,
+  zIndex: 10,
+} as const;
+
+// "Paid · Door UPI (webhook)", "Marked unpaid (was Online) · by Asha"
+function describe(e: HistoryEntry) {
+  const via = e.via ? PAY_CHIP[e.via].label : null;
+  let s = ACTION_LABEL[e.action];
+  if (e.action === "paid" && via) s += ` · ${via}`;
+  if (e.action === "unpaid" && via) s += ` (was ${via})`;
+  if (e.source !== "door") s += ` (${e.source})`;
+  if (e.by) s += ` · by ${e.by}`;
+  return s;
+}
 
 type Filter = "all" | "notIn" | "in" | "unpaid";
 const FILTERS: { key: Filter; label: string; match: (g: GuestRow) => boolean }[] = [
@@ -74,7 +106,36 @@ function shortProgram(p: string) {
   return p.replace(/^BSc Honours - /, "");
 }
 
-export default function DoorClient({ fee }: { fee: number }) {
+// Asked once per device so every action in History says who did it.
+function NameForm({ current, onCancel }: { current?: string; onCancel?: () => void }) {
+  const [name, setName] = useState(current ?? "");
+  async function onSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    const data = await postJson("/api/door/name", { name });
+    if (data.ok) location.reload();
+  }
+  return (
+    <form onSubmit={onSubmit}>
+      <h1>Door</h1>
+      <p>Your name, so History shows who did what on this phone.</p>
+      <input placeholder="Your name" value={name} onChange={(e) => setName(e.target.value)} maxLength={40} autoFocus />
+      <button type="submit">Continue</button>
+      {onCancel && (
+        <button type="button" onClick={onCancel}>
+          Cancel
+        </button>
+      )}
+    </form>
+  );
+}
+
+export default function DoorClient({ fee, volunteer }: { fee: number; volunteer?: string }) {
+  const [renaming, setRenaming] = useState(false);
+  if (!volunteer || renaming) return <NameForm current={volunteer} onCancel={volunteer ? () => setRenaming(false) : undefined} />;
+  return <Door fee={fee} volunteer={volunteer} onRename={() => setRenaming(true)} />;
+}
+
+function Door({ fee, volunteer, onRename }: { fee: number; volunteer: string; onRename: () => void }) {
   const [result, setResult] = useState<DoorResult | null>(null);
   const [busy, setBusy] = useState(false);
   const [ask, setAsk] = useState<Ask | null>(null);
@@ -84,6 +145,7 @@ export default function DoorClient({ fee }: { fee: number }) {
   const [refresh, setRefresh] = useState(0);
   const [open, setOpen] = useState<string | null>(null);
   const [filter, setFilter] = useState<Filter>("all");
+  const [history, setHistory] = useState<History | null>(null);
   const busyRef = useRef(false);
 
   const scan = useCallback(async (raw: string) => {
@@ -143,11 +205,14 @@ export default function DoorClient({ fee }: { fee: number }) {
     });
   }
 
-  function askUndoPaid(g: Who) {
+  function askMarkUnpaid(g: Who, via?: PaidVia) {
+    const manual = !via || MANUAL.includes(via);
     setAsk({
-      title: `Undo payment for ${g.name} (${g.rollNo})?`,
-      detail: "They'll show as unpaid and their check-in is cleared too.",
-      confirmLabel: "Yes, undo payment",
+      title: `Mark ${g.name} (${g.rollNo}) as UNPAID?`,
+      detail: manual
+        ? "They'll show as unpaid and their check-in is cleared too."
+        : `They paid ₹${fee} through Razorpay. This does NOT refund it: refund from the Razorpay dashboard if needed. Their check-in is cleared and they'll be asked to pay again.`,
+      confirmLabel: "Yes, mark unpaid",
       run: async () => {
         await postJson("/api/door/undo", { token: g.token, what: "payment" });
         setResult(null);
@@ -167,6 +232,15 @@ export default function DoorClient({ fee }: { fee: number }) {
         setRefresh((n) => n + 1);
       },
     });
+  }
+
+  // Whole-door feed, or one guest's when `g` is given.
+  async function showHistory(g?: Who) {
+    setHistory({ who: g, entries: null });
+    const res = await fetch(`/api/door/history${g ? `?token=${encodeURIComponent(g.token)}` : ""}`);
+    if (res.status === 401) return location.reload();
+    const { entries } = await res.json();
+    setHistory({ who: g, entries });
   }
 
   async function confirmAsk() {
@@ -193,7 +267,21 @@ export default function DoorClient({ fee }: { fee: number }) {
 
   return (
     <div>
-      <h1 style={{ margin: "0 0 4px" }}>Door</h1>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+        <h1 style={{ margin: "0 0 4px" }}>Door</h1>
+        <button onClick={() => showHistory()} style={{ width: "auto", margin: 0 }}>
+          History
+        </button>
+      </div>
+      <p style={{ margin: "0 0 4px", fontSize: 13, color: "#555" }}>
+        You: <b>{volunteer}</b> ·{" "}
+        <button
+          onClick={onRename}
+          style={{ width: "auto", margin: 0, padding: 0, border: "none", background: "none", color: "inherit", textDecoration: "underline", fontSize: 13 }}
+        >
+          change
+        </button>
+      </p>
       <p style={{ margin: "0 0 8px", fontSize: 13, color: "#555" }}>
         <b>All {totalIn}/{total} in</b>
         {stats.map((s) => (
@@ -204,20 +292,51 @@ export default function DoorClient({ fee }: { fee: number }) {
         ))}
       </p>
 
+      {history && (
+        <div role="dialog" style={OVERLAY}>
+          <div
+            style={{ background: "white", color: "black", padding: 16, maxWidth: 520, width: "100%", maxHeight: "100%", overflowY: "auto" }}
+          >
+            <h2 style={{ marginTop: 0 }}>
+              {history.who ? `History: ${history.who.name} (${history.who.rollNo})` : "History"}
+            </h2>
+            {!history.entries ? (
+              <p>Loading…</p>
+            ) : history.entries.length === 0 ? (
+              <p>Nothing yet.</p>
+            ) : (
+              <ul style={{ paddingLeft: 0, margin: 0, listStyle: "none", fontSize: 14 }}>
+                {history.entries.map((e, i) => (
+                  <li key={i} style={{ padding: "6px 0", borderBottom: "1px solid #ddd" }}>
+                    <span style={{ color: "#555" }}>{new Date(e.at).toLocaleTimeString()}</span>
+                    {!history.who && (
+                      <>
+                        {" "}
+                        <b>{e.name}</b> ({e.rollNo})
+                      </>
+                    )}
+                    <br />
+                    {describe(e)}
+                  </li>
+                ))}
+              </ul>
+            )}
+            <button
+              onClick={() => showHistory(history.who)}
+              disabled={!history.entries}
+              style={FULL}
+            >
+              Refresh
+            </button>
+            <button onClick={() => setHistory(null)} style={{ ...FULL, fontWeight: "bold" }}>
+              Close
+            </button>
+          </div>
+        </div>
+      )}
+
       {ask && (
-        <div
-          role="dialog"
-          style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(0,0,0,0.6)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            padding: 16,
-            zIndex: 10,
-          }}
-        >
+        <div role="dialog" style={OVERLAY}>
           <div style={{ background: "white", color: "black", padding: 16, maxWidth: 420, width: "100%" }}>
             <h2 style={{ marginTop: 0 }}>{ask.title}</h2>
             {ask.detail && <p>{ask.detail}</p>}
@@ -268,11 +387,9 @@ export default function DoorClient({ fee }: { fee: number }) {
               <button onClick={() => askUndoCheckIn(result)} style={FULL}>
                 Wrong person? Undo check-in
               </button>
-              {MANUAL.includes(result.paidVia) && (
-                <button onClick={() => askUndoPaid(result)} style={FULL}>
-                  Undo payment
-                </button>
-              )}
+              <button onClick={() => askMarkUnpaid(result, result.paidVia)} style={FULL}>
+                Mark unpaid
+              </button>
             </>
           )}
           {result.result === "unpaid" && (
@@ -392,9 +509,9 @@ export default function DoorClient({ fee }: { fee: number }) {
                       Undo check-in
                     </button>
                   )}
-                  {g.paid && MANUAL.includes(g.paidVia) && (
-                    <button onClick={() => askUndoPaid(g)} style={FULL}>
-                      Undo payment
+                  {g.paid && (
+                    <button onClick={() => askMarkUnpaid(g, g.paidVia)} style={FULL}>
+                      Mark unpaid
                     </button>
                   )}
                   {!g.paid && (
@@ -410,6 +527,9 @@ export default function DoorClient({ fee }: { fee: number }) {
                       </button>
                     </>
                   )}
+                  <button onClick={() => showHistory(g)} style={FULL}>
+                    History
+                  </button>
                 </div>
               )}
             </li>

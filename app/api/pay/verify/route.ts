@@ -15,6 +15,6 @@ export async function POST(req: Request) {
   }
 
   // Order must be one we created for this guest, so a payment can't be replayed onto another invite.
-  await markPaid({ token, razorpayOrderIds: razorpay_order_id }, "online", razorpay_payment_id);
+  await markPaid({ token, razorpayOrderIds: razorpay_order_id }, "online", razorpay_payment_id, "checkout");
   return Response.json({ ok: true });
 }
