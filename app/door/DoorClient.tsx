@@ -273,7 +273,7 @@ function Door({ fee, volunteer, onRename }: { fee: number; volunteer: string; on
           History
         </button>
       </div>
-      <p style={{ margin: "0 0 4px", fontSize: 13, color: "#555" }}>
+      <p style={{ margin: "0 0 4px", fontSize: 13, color: "var(--bone-dim)" }}>
         You: <b>{volunteer}</b> ·{" "}
         <button
           onClick={onRename}
@@ -282,7 +282,7 @@ function Door({ fee, volunteer, onRename }: { fee: number; volunteer: string; on
           change
         </button>
       </p>
-      <p style={{ margin: "0 0 8px", fontSize: 13, color: "#555" }}>
+      <p style={{ margin: "0 0 8px", fontSize: 13, color: "var(--bone-dim)" }}>
         <b>All {totalIn}/{total} in</b>
         {stats.map((s) => (
           <span key={s.program}>
@@ -295,7 +295,7 @@ function Door({ fee, volunteer, onRename }: { fee: number; volunteer: string; on
       {history && (
         <div role="dialog" style={OVERLAY}>
           <div
-            style={{ background: "white", color: "black", padding: 16, maxWidth: 520, width: "100%", maxHeight: "100%", overflowY: "auto" }}
+            style={{ background: "var(--panel)", color: "var(--bone)", padding: 16, maxWidth: 520, width: "100%", maxHeight: "100%", overflowY: "auto" }}
           >
             <h2 style={{ marginTop: 0 }}>
               {history.who ? `History: ${history.who.name} (${history.who.rollNo})` : "History"}
@@ -307,8 +307,8 @@ function Door({ fee, volunteer, onRename }: { fee: number; volunteer: string; on
             ) : (
               <ul style={{ paddingLeft: 0, margin: 0, listStyle: "none", fontSize: 14 }}>
                 {history.entries.map((e, i) => (
-                  <li key={i} style={{ padding: "6px 0", borderBottom: "1px solid #ddd" }}>
-                    <span style={{ color: "#555" }}>{new Date(e.at).toLocaleTimeString()}</span>
+                  <li key={i} style={{ padding: "6px 0", borderBottom: "1px solid var(--line)" }}>
+                    <span style={{ color: "var(--bone-dim)" }}>{new Date(e.at).toLocaleTimeString()}</span>
                     {!history.who && (
                       <>
                         {" "}
@@ -337,7 +337,7 @@ function Door({ fee, volunteer, onRename }: { fee: number; volunteer: string; on
 
       {ask && (
         <div role="dialog" style={OVERLAY}>
-          <div style={{ background: "white", color: "black", padding: 16, maxWidth: 420, width: "100%" }}>
+          <div style={{ background: "var(--panel)", color: "var(--bone)", padding: 16, maxWidth: 420, width: "100%" }}>
             <h2 style={{ marginTop: 0 }}>{ask.title}</h2>
             {ask.detail && <p>{ask.detail}</p>}
             <button onClick={confirmAsk} disabled={busy} style={{ width: "100%", fontWeight: "bold" }}>
@@ -419,7 +419,7 @@ function Door({ fee, volunteer, onRename }: { fee: number; volunteer: string; on
         </button>
       )}
 
-      <div style={{ position: "sticky", top: 0, background: "white", zIndex: 5, padding: "8px 0 4px" }}>
+      <div style={{ position: "sticky", top: 0, background: "var(--page)", zIndex: 5, padding: "8px 0 4px" }}>
         <input
           placeholder="Find guest: name or roll number"
           value={query}
@@ -438,11 +438,11 @@ function Door({ fee, volunteer, onRename }: { fee: number; volunteer: string; on
                 style={{
                   flex: "1 0 auto",
                   borderRadius: 999,
-                  border: "1px solid #333",
+                  border: "1px solid var(--bone)",
                   padding: "4px 10px",
                   fontSize: 14,
-                  background: on ? "#333" : "white",
-                  color: on ? "white" : "#333",
+                  background: on ? "var(--bone)" : "transparent",
+                  color: on ? "var(--ink)" : "var(--bone)",
                 }}
               >
                 {f.label} {list.filter(f.match).length}
@@ -457,7 +457,7 @@ function Door({ fee, volunteer, onRename }: { fee: number; volunteer: string; on
           const isOpen = open === g.token;
           const pay = g.paid && g.paidVia ? PAY_CHIP[g.paidVia] : null;
           return (
-            <li key={g.token} style={{ borderBottom: "1px solid #ddd" }}>
+            <li key={g.token} style={{ borderBottom: "1px solid var(--line)" }}>
               <button
                 onClick={() => setOpen(isOpen ? null : g.token)}
                 aria-expanded={isOpen}
@@ -535,7 +535,7 @@ function Door({ fee, volunteer, onRename }: { fee: number; volunteer: string; on
             </li>
           );
         })}
-        {shown.length === 0 && <li style={{ padding: "12px 0", color: "#555" }}>No guests match.</li>}
+        {shown.length === 0 && <li style={{ padding: "12px 0", color: "var(--bone-dim)" }}>No guests match.</li>}
       </ul>
 
       <p>

@@ -73,11 +73,15 @@ export default function PayButton(props: { token: string; name: string; fee: num
   }
 
   return (
-    <div>
-      <button onClick={pay} disabled={busy}>
+    <div className="pay">
+      <button onClick={pay} disabled={busy} className="btn btn-big">
         {busy ? "Opening payment…" : `Pay ₹${props.fee}`}
       </button>
-      {error && <p className="error">{error}</p>}
+      {error && (
+        <p className="error" role="alert">
+          {error}
+        </p>
+      )}
     </div>
   );
 }

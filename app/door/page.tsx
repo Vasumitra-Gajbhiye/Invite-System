@@ -4,5 +4,5 @@ import DoorClient from "./DoorClient";
 import PinForm from "./PinForm";
 
 export default async function DoorPage() {
-  return <main>{(await isDoorAuthed()) ? <DoorClient fee={FEE_RUPEES} volunteer={await doorVolunteer()} /> : <PinForm />}</main>;
+  return <main className="door">{(await isDoorAuthed()) ? <DoorClient fee={FEE_RUPEES} volunteer={await doorVolunteer()} /> : <PinForm />}</main>;
 }

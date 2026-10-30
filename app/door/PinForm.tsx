@@ -22,7 +22,7 @@ export default function PinForm() {
 
   return (
     <form onSubmit={onSubmit}>
-      <h1>Door</h1>
+      <h1 className="title title-small">Door</h1>
       <input
         type="password"
         inputMode="numeric"

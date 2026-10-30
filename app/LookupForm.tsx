@@ -28,14 +28,26 @@ export default function LookupForm() {
   }
 
   return (
-    <form onSubmit={onSubmit}>
-      <label>
-        Roll number
-        <input name="rollNo" required inputMode="numeric" placeholder="e.g. 2602024" autoComplete="off" />
+    <form onSubmit={onSubmit} className="lookup">
+      <label htmlFor="rollNo" className="label">
+        Your roll number
       </label>
-      {error && <p className="error">{error}</p>}
-      <button type="submit" disabled={busy}>
-        {busy ? "Summoning…" : "Get my invite"}
+      <input
+        id="rollNo"
+        name="rollNo"
+        className="input"
+        required
+        inputMode="numeric"
+        placeholder="2602024"
+        autoComplete="off"
+      />
+      {error && (
+        <p className="error" role="alert">
+          {error}
+        </p>
+      )}
+      <button type="submit" className="btn" disabled={busy}>
+        {busy ? "Summoning…" : "Enter if you dare"}
       </button>
     </form>
   );

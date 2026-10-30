@@ -1,8 +1,11 @@
+import Image from "next/image";
 import { notFound } from "next/navigation";
 import QRCode from "qrcode";
+import EventDetails from "@/app/EventDetails";
 import { EVENT, FEE_RUPEES } from "@/lib/config";
 import { guests } from "@/lib/db";
 import { syncPayment } from "@/lib/guests";
+import skull from "@/public/skull.png";
 import PayButton from "./PayButton";
 
 export default async function InvitePage(props: PageProps<"/i/[token]">) {
@@ -12,41 +15,50 @@ export default async function InvitePage(props: PageProps<"/i/[token]">) {
   // Catches payments where the tab closed before verify ran and the webhook hasn't landed.
   if (!guest.paid && guest.razorpayOrderIds?.length) guest.paid = await syncPayment(guest);
 
-  const qr = await QRCode.toDataURL(guest.token, { width: 300, margin: 2 });
+  const qr = await QRCode.toDataURL(guest.token, {
+    width: 300,
+    margin: 2,
+    color: { dark: "#170404", light: "#ece0c8" },
+  });
 
   return (
-    <main>
-      <h1>{guest.name}, you&apos;re summoned.</h1>
-      <p>
+    <main className="poster">
+      <Image src={skull} alt="" className="skull skull-small" priority sizes="200px" />
+      <h1 className="guest-name">{guest.name},</h1>
+      <p className="script summoned">you&rsquo;re summoned.</p>
+      <p className="guest-meta">
         {guest.rollNo} · {guest.program}
       </p>
-      <p>{EVENT.tagline}</p>
-      <p>
-        <b>{EVENT.name}</b>
-        <br />
-        {EVENT.date}, {EVENT.time}
-        <br />
-        {EVENT.venue}
-        <br />
-        Dress code: {EVENT.dressCode}
-      </p>
 
-      <p>
-        Status:{" "}
-        {guest.checkedInAt ? "Checked in ✅" : guest.paid ? "Paid ✅" : `Unpaid ⏳ (₹${FEE_RUPEES})`}
-      </p>
+      <div className="stamp-wrap">
+        {guest.checkedInAt ? (
+          <span className="stamp">Checked in</span>
+        ) : guest.paid ? (
+          <span className="stamp">Paid</span>
+        ) : (
+          <span className="stamp stamp-unpaid">Unpaid · ₹{FEE_RUPEES}</span>
+        )}
+      </div>
 
-      {!guest.paid && (
-        <PayButton token={guest.token} name={guest.name} fee={FEE_RUPEES} />
-      )}
+      {!guest.paid && <PayButton token={guest.token} name={guest.name} fee={FEE_RUPEES} />}
 
-      <h2>Your entry pass</h2>
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={qr} alt="Entry QR code" width={300} height={300} />
-      <p>
-        Show this QR at the door. Bookmark this page or screenshot the QR.
-        {!guest.paid && ` Not paid yet? You can also pay ₹${FEE_RUPEES} at the door.`}
-      </p>
+      <section className="panel">
+        <h2 className="panel-title">Your entry pass</h2>
+        <div className="qr-card">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={qr} alt="Entry QR code" width={300} height={300} />
+        </div>
+        <p className="note">
+          Show this at the door. Bookmark this page or screenshot the pass.
+          {!guest.paid && ` Not paid yet? You can also pay ₹${FEE_RUPEES} at the door.`}
+        </p>
+      </section>
+
+      <h2 className="title title-small">{EVENT.name}</h2>
+      <p className="script tagline">{EVENT.tagline}</p>
+      <EventDetails />
+      <p className="lure">{EVENT.lure[1]}</p>
+      <p className="dress">Dress code: {EVENT.dressCode}</p>
     </main>
   );
 }

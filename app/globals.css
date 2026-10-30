@@ -1,23 +1,434 @@
+/* Colours lifted from the poster: blood-red paper, black ink, bone lettering. */
+:root {
+  --blood: #7f1d17;
+  --ink: #170404;
+  --bone: #ece0c8;
+  --bone-dim: rgba(236, 224, 200, 0.72);
+  --line: rgba(236, 224, 200, 0.22);
+  --page: var(--blood);
+  --panel: #5e120e;
+  color-scheme: dark;
+}
+
+/* The door is a working tool, so it sits on darker paper where the green/amber/red results stand out. */
+body:has(.door) {
+  --page: #1f0806;
+  --panel: #33100c;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  background: var(--page);
+}
+
 body {
-  font-family: system-ui, sans-serif;
-  max-width: 480px;
   margin: 0 auto;
+  max-width: 520px;
+  min-height: 100dvh;
   padding: 16px;
+  background: var(--page);
+  color: var(--ink);
+  font-family: var(--font-body), Georgia, serif;
+  font-size: 18px;
   line-height: 1.4;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Printed-paper grain over everything. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  pointer-events: none;
+  opacity: 0.22;
+  mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1.4 -0.35'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
 input,
 button {
   font: inherit;
-  padding: 8px;
+  padding: 8px 10px;
   margin: 4px 0;
+  color: var(--bone);
+  border-radius: 4px;
+}
+
+button {
+  background: transparent;
+  border: 1px solid var(--bone);
+  cursor: pointer;
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: progress;
 }
 
 input {
   width: 100%;
-  box-sizing: border-box;
+  background: rgba(23, 4, 4, 0.35);
+  border: 1px solid var(--line);
+}
+
+:focus-visible {
+  outline: 2px solid var(--bone);
+  outline-offset: 2px;
 }
 
 .error {
-  color: #c00;
+  margin: 8px 0;
+  padding: 8px 12px;
+  color: var(--bone);
+  background: rgba(23, 4, 4, 0.45);
+  border-left: 3px solid var(--bone);
+  font-size: 16px;
+}
+
+/* ——— Poster pages ——— */
+
+.poster {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 8px 0 32px;
+}
+
+.arch {
+  width: min(300px, 82%);
+  margin-bottom: -6px;
+  overflow: visible;
+}
+
+.arch text {
+  fill: var(--bone);
+  font-family: var(--font-caps), serif;
+  font-size: 19px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+}
+
+.skull {
+  width: 88%;
+  max-width: 440px;
+  height: auto;
+  margin: 4px 0 6px;
+  animation: rise 0.9s ease-out both;
+}
+
+.skull-small {
+  width: 46%;
+  max-width: 200px;
+  margin-bottom: 4px;
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+.title {
+  margin: 0;
+  font-family: var(--font-title), serif;
+  font-weight: 400;
+  font-size: clamp(30px, 9.2vw, 56px);
+  line-height: 1;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--ink);
+  text-shadow: 0 0 1px rgba(23, 4, 4, 0.7);
+}
+
+.title-small {
+  font-size: clamp(26px, 7.5vw, 40px);
+  margin-top: 36px;
+}
+
+.script {
+  margin: 0;
+  font-family: var(--font-script), cursive;
+  color: var(--bone);
+  line-height: 1.15;
+}
+
+.tagline {
+  font-size: clamp(24px, 7vw, 34px);
+  margin-top: -2px;
+}
+
+.blurb {
+  margin: 18px 4px 4px;
+  font-family: var(--font-caps), serif;
+  font-size: 19px;
+  line-height: 1.2;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+/* Time | 31st October | venue */
+.when-row {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  margin: 22px 0 8px;
+  color: var(--bone);
+}
+
+.when-row p {
+  margin: 0;
+}
+
+.when-side {
+  font-family: var(--font-display), serif;
+  font-size: clamp(17px, 5.1vw, 28px);
+  line-height: 1.05;
+  text-transform: uppercase;
+  white-space: pre;
+}
+
+.when-date {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.when-num {
+  font-family: var(--font-display), serif;
+  font-size: clamp(58px, 17vw, 86px);
+  line-height: 0.85;
+  text-transform: uppercase;
+}
+
+.when-month {
+  font-family: var(--font-script), cursive;
+  font-size: clamp(32px, 9vw, 44px);
+  line-height: 1;
+  margin-top: -0.12em;
+}
+
+.panel {
+  position: relative;
+  width: 100%;
+  margin: 28px 0 8px;
+  padding: 22px 18px 20px;
+  background: rgba(23, 4, 4, 0.28);
+  border: 1px solid rgba(236, 224, 200, 0.5);
+  outline: 1px solid rgba(236, 224, 200, 0.22);
+  outline-offset: 4px;
+}
+
+.panel::before,
+.panel::after {
+  content: "✦";
+  position: absolute;
+  top: -0.7em;
+  padding: 0 6px;
+  font-size: 14px;
+  color: var(--bone);
+  background: var(--page);
+}
+
+.panel::before {
+  left: 14px;
+}
+
+.panel::after {
+  right: 14px;
+}
+
+.panel-title {
+  margin: 0 0 12px;
+  font-family: var(--font-display), serif;
+  font-weight: 400;
+  font-size: 26px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--bone);
+}
+
+.lookup {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.label {
+  font-family: var(--font-caps), serif;
+  font-size: 16px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--bone-dim);
+}
+
+.input {
+  margin: 0;
+  padding: 10px 8px 8px;
+  border: none;
+  border-bottom: 2px solid var(--bone);
+  border-radius: 0;
+  background: rgba(23, 4, 4, 0.3);
+  font-family: var(--font-display), serif;
+  font-size: 30px;
+  letter-spacing: 0.12em;
+  text-align: center;
+}
+
+.input::placeholder {
+  color: rgba(236, 224, 200, 0.28);
+}
+
+.btn {
+  display: block;
+  width: 100%;
+  margin: 6px 0 0;
+  padding: 13px 20px 11px;
+  border: none;
+  border-radius: 3px;
+  background: var(--bone);
+  color: var(--ink);
+  font-family: var(--font-display), serif;
+  font-size: 23px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  text-align: center;
+  text-decoration: none;
+  box-shadow: 0 4px 0 var(--ink);
+  transition: transform 0.08s, box-shadow 0.08s;
+}
+
+.btn:active:not(:disabled) {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 var(--ink);
+}
+
+.btn-big {
+  font-size: 28px;
+  padding: 16px 20px 13px;
+}
+
+a.btn {
+  width: auto;
+  margin-top: 24px;
+}
+
+.lure {
+  margin: 26px 8px 0;
+  font-size: 19px;
+  line-height: 1.25;
+  font-weight: 600;
+}
+
+.dress {
+  margin: 18px 0 0;
+  font-family: var(--font-caps), serif;
+  font-size: 16px;
+  letter-spacing: 0.08em;
+}
+
+/* ——— Invite page ——— */
+
+.guest-name {
+  margin: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  font-family: var(--font-title), serif;
+  font-weight: 400;
+  font-size: clamp(32px, 10vw, 52px);
+  line-height: 1;
+  color: var(--ink);
+  text-shadow: 0 0 1px rgba(23, 4, 4, 0.7);
+}
+
+.summoned {
+  font-size: clamp(30px, 9vw, 42px);
+}
+
+.guest-meta {
+  margin: 8px 0 0;
+  font-family: var(--font-caps), serif;
+  font-size: 16px;
+  letter-spacing: 0.1em;
+  color: var(--bone-dim);
+}
+
+.stamp-wrap {
+  margin: 22px 0 6px;
+}
+
+.stamp {
+  display: inline-block;
+  padding: 6px 16px 3px;
+  border: 4px double var(--bone);
+  border-radius: 6px;
+  color: var(--bone);
+  font-family: var(--font-display), serif;
+  font-size: 30px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  transform: rotate(-5deg);
+}
+
+.stamp-unpaid {
+  color: var(--ink);
+  border-color: var(--ink);
+}
+
+.pay {
+  width: 100%;
+  margin-top: 14px;
+}
+
+/* Sits above the grain overlay so the QR keeps full contrast for scanners. */
+.qr-card {
+  position: relative;
+  z-index: 101;
+  display: inline-block;
+  padding: 10px;
+  background: var(--bone);
+  border-radius: 4px;
+  box-shadow: 0 6px 0 var(--ink);
+}
+
+.qr-card img {
+  display: block;
+  width: min(260px, 64vw);
+  height: auto;
+}
+
+.note {
+  margin: 18px 0 0;
+  font-size: 16px;
+  font-style: italic;
+  color: var(--bone-dim);
+}
+
+/* ——— Door ——— */
+
+.door {
+  color: var(--bone);
+}
+
+.door .title {
+  color: var(--bone);
+  text-shadow: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skull {
+    animation: none;
+  }
+  .btn {
+    transition: none;
+  }
 }
