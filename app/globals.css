@@ -1,0 +1,23 @@
+body {
+  font-family: system-ui, sans-serif;
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 16px;
+  line-height: 1.4;
+}
+
+input,
+button {
+  font: inherit;
+  padding: 8px;
+  margin: 4px 0;
+}
+
+input {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.error {
+  color: #c00;
+}
