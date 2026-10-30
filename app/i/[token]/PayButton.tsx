@@ -27,7 +27,7 @@ function loadCheckout() {
   });
 }
 
-export default function PayButton(props: { token: string; name: string; email: string; phone: string; fee: number }) {
+export default function PayButton(props: { token: string; name: string; fee: number }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -53,7 +53,7 @@ export default function PayButton(props: { token: string; name: string; email: s
         currency: "INR",
         name: EVENT.name,
         description: "Entry fee",
-        prefill: { name: props.name, email: props.email, contact: props.phone },
+        prefill: { name: props.name },
         notes: { token: props.token },
         handler: async (r: RazorpayHandlerResponse) => {
           await fetch("/api/pay/verify", {

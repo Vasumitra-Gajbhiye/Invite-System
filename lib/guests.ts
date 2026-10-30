@@ -2,17 +2,17 @@ import crypto from "crypto";
 import QRCode from "qrcode";
 import type { Filter } from "mongodb";
 import { FEE_PAISE, EVENT } from "./config";
-import { guests, type Guest, type PaidVia } from "./db";
+import { guests, MANUAL_PAID_VIA, type Guest, type PaidVia } from "./db";
 import { razorpay } from "./razorpay";
 
 export function newToken() {
   return crypto.randomBytes(18).toString("base64url"); // 24 chars
 }
 
-// Keeps the last 10 digits so "+91 98765 43210" and "9876543210" match.
-export function normalizePhone(raw: string) {
+// Roll numbers are 7 digits, e.g. 2602024. Tolerates spaces and stray characters.
+export function normalizeRoll(raw: string) {
   const digits = raw.replace(/\D/g, "");
-  return digits.length >= 10 ? digits.slice(-10) : null;
+  return digits.length === 7 ? digits : null;
 }
 
 // Idempotent: only the first successful payment is recorded.
@@ -22,6 +22,46 @@ export async function markPaid(filter: Filter<Guest>, via: PaidVia, paymentId?: 
     { ...filter, paid: { $ne: true } },
     { $set: { paid: true, paidAt: new Date(), paidVia: via, razorpayPaymentId: paymentId } },
   );
+}
+
+// Door volunteer recording a payment Razorpay didn't see (cash or UPI to someone's personal account).
+// Returns false if the guest was already paid.
+export async function markPaidManually(token: string, via: PaidVia) {
+  const col = await guests();
+  const now = new Date();
+  const res = await col.updateOne(
+    { token, paid: { $ne: true } },
+    {
+      $set: { paid: true, paidAt: now, paidVia: via },
+      $push: { log: { at: now, action: "paid", via, source: "door" } },
+    },
+  );
+  return res.modifiedCount === 1;
+}
+
+// Reverts a manual mark. Also clears the check-in, since an unpaid guest can't be inside.
+// Razorpay-confirmed payments are never undone here.
+export async function undoManualPaid(token: string) {
+  const col = await guests();
+  const res = await col.updateOne(
+    { token, paid: true, paidVia: { $in: MANUAL_PAID_VIA } },
+    {
+      $set: { paid: false },
+      $unset: { paidAt: "", paidVia: "", checkedInAt: "" },
+      $push: { log: { at: new Date(), action: "undo-paid", source: "door" } },
+    },
+  );
+  return res.modifiedCount === 1;
+}
+
+// For when the wrong person was let in on someone else's QR.
+export async function undoCheckIn(token: string) {
+  const col = await guests();
+  const res = await col.updateOne(
+    { token, checkedInAt: { $exists: true } },
+    { $unset: { checkedInAt: "" }, $push: { log: { at: new Date(), action: "undo-checkin", source: "door" } } },
+  );
+  return res.modifiedCount === 1;
 }
 
 // Asks Razorpay directly whether any of this guest's payments went through,
@@ -108,7 +148,7 @@ export async function getDoorPayment(guest: Guest): Promise<DoorPayment> {
     description: `${EVENT.name} entry`,
     reference_id: `${guest.token}-${Date.now()}`,
     expire_by: closeBy,
-    customer: { name: guest.name, email: guest.email, contact: guest.phone },
+    customer: { name: guest.name },
     notify: { sms: false, email: false },
     notes,
   });

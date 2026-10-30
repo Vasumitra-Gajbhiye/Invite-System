@@ -1,5 +1,5 @@
 import { EVENT, FEE_RUPEES } from "@/lib/config";
-import SignupForm from "./SignupForm";
+import LookupForm from "./LookupForm";
 
 export default function Home() {
   return (
@@ -14,7 +14,7 @@ export default function Home() {
         Entry: ₹{FEE_RUPEES}
       </p>
       <h2>Get your invite</h2>
-      <SignupForm />
+      <LookupForm />
     </main>
   );
 }

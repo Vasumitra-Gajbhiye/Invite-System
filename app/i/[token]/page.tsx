@@ -17,6 +17,9 @@ export default async function InvitePage(props: PageProps<"/i/[token]">) {
   return (
     <main>
       <h1>{guest.name}, you&apos;re summoned.</h1>
+      <p>
+        {guest.rollNo} · {guest.program}
+      </p>
       <p>{EVENT.tagline}</p>
       <p>
         <b>{EVENT.name}</b>
@@ -34,7 +37,7 @@ export default async function InvitePage(props: PageProps<"/i/[token]">) {
       </p>
 
       {!guest.paid && (
-        <PayButton token={guest.token} name={guest.name} email={guest.email} phone={guest.phone} fee={FEE_RUPEES} />
+        <PayButton token={guest.token} name={guest.name} fee={FEE_RUPEES} />
       )}
 
       <h2>Your entry pass</h2>
