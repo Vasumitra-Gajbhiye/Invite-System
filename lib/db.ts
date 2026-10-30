@@ -40,6 +40,8 @@ export type Guest = {
   doorLinkId?: string;
   doorLinkUrl?: string;
   doorPaymentExpiresAt?: Date;
+  // Paise the door QR/link was created for, so a PRICE change doesn't reuse an old-amount QR.
+  doorPaymentAmount?: number;
   checkedInAt?: Date;
   // Razorpay order/QR/link IDs detached by mark-unpaid, so syncPayment no longer finds them.
   archivedRazorpayIds?: string[];

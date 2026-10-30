@@ -14,7 +14,7 @@ function who(g: Guest): Who {
   return { token: g.token, name: g.name, rollNo: g.rollNo, program: g.program };
 }
 
-// Checks a guest in if paid. If unpaid and `withPayment` is set, returns a ₹95 payment QR.
+// Checks a guest in if paid. If unpaid and `withPayment` is set, returns a payment QR for the fee.
 // `by` is the volunteer, recorded in the guest's log.
 export async function admit(token: string, withPayment: boolean, by?: string): Promise<DoorResult> {
   const col = await guests();

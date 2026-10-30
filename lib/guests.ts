@@ -66,6 +66,7 @@ export async function markUnpaid(token: string, by: string) {
         doorLinkId: "",
         doorLinkUrl: "",
         doorPaymentExpiresAt: "",
+        doorPaymentAmount: "",
       },
       $push: {
         archivedRazorpayIds: { $each: archived },
@@ -126,12 +127,14 @@ export async function syncPayment(guest: Guest) {
 
 export type DoorPayment = { kind: "upi-qr" | "link"; image: string; expiresAt: Date };
 
-// Creates (or reuses) a ₹95 payment for the door. Prefers a Razorpay UPI QR;
+// Creates (or reuses) a FEE_PAISE payment for the door. Prefers a Razorpay UPI QR;
 // falls back to a payment link rendered as a QR if the QR Codes API isn't enabled.
 export async function getDoorPayment(guest: Guest, by?: string): Promise<DoorPayment> {
   const col = await guests();
   const stillValid =
-    guest.doorPaymentExpiresAt && guest.doorPaymentExpiresAt.getTime() - Date.now() > 2 * 60_000;
+    guest.doorPaymentAmount === FEE_PAISE &&
+    guest.doorPaymentExpiresAt &&
+    guest.doorPaymentExpiresAt.getTime() - Date.now() > 2 * 60_000;
   if (stillValid && guest.doorQrImage) {
     return { kind: "upi-qr", image: guest.doorQrImage, expiresAt: guest.doorPaymentExpiresAt! };
   }
@@ -158,7 +161,7 @@ export async function getDoorPayment(guest: Guest, by?: string): Promise<DoorPay
     await col.updateOne(
       { token: guest.token },
       {
-        $set: { doorQrId: qr.id, doorQrImage: qr.image_url, doorPaymentExpiresAt: expiresAt },
+        $set: { doorQrId: qr.id, doorQrImage: qr.image_url, doorPaymentExpiresAt: expiresAt, doorPaymentAmount: FEE_PAISE },
         $push: { log: { at: new Date(), action: "payment-qr", source: "door", by } },
       },
     );
@@ -180,7 +183,7 @@ export async function getDoorPayment(guest: Guest, by?: string): Promise<DoorPay
   await col.updateOne(
     { token: guest.token },
     {
-      $set: { doorLinkId: link.id, doorLinkUrl: link.short_url, doorPaymentExpiresAt: expiresAt },
+      $set: { doorLinkId: link.id, doorLinkUrl: link.short_url, doorPaymentExpiresAt: expiresAt, doorPaymentAmount: FEE_PAISE },
       $push: { log: { at: new Date(), action: "payment-qr", source: "door", by } },
     },
   );
